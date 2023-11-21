@@ -6,6 +6,8 @@ import akka.actor.typed.ActorRef;
 import akka.http.javadsl.model.*;
 import akka.http.javadsl.testkit.JUnitRouteTest;
 import akka.http.javadsl.testkit.TestRoute;
+import com.example.User.UserRegistry;
+import com.example.User.UserRoutes;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
 import akka.http.javadsl.model.HttpRequest;

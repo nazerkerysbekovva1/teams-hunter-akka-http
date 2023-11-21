@@ -8,6 +8,13 @@ import akka.http.javadsl.ServerBinding;
 import akka.http.javadsl.server.Route;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.ActorSystem;
+import com.example.Auth.AuthRoutes;
+import com.example.User.EmployerRegistry;
+import com.example.User.JobSeekerRegistry;
+import com.example.User.UserRegistry;
+import com.example.User.UserRoutes;
+import static akka.http.javadsl.server.Directives.*;
+
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletionStage;
@@ -35,7 +42,7 @@ public class StartApp {
 
     public static void main(String[] args) throws Exception {
         //#server-bootstrapping
-        Behavior<NotUsed> rootBehavior = Behaviors.setup(context -> {
+        Behavior<UserRegistry.Command> rootBehavior = Behaviors.setup(context -> {
             ActorRef<UserRegistry.Command> userRegistryActor =
                 context.spawn(UserRegistry.create(), "UserRegistry");
 
@@ -45,8 +52,20 @@ public class StartApp {
             ActorRef<EmployerRegistry.Command> employerRegistryActor =
                     context.spawn(EmployerRegistry.create(), "EmployerRegistry");
 
-            UserRoutes userRoutes = new UserRoutes(context.getSystem(), userRegistryActor, jobSeekerRegistryActor, employerRegistryActor);
-            startHttpServer(userRoutes.userRoutes(), context.getSystem());
+            UserRegistry userRegistry = new UserRegistry(context);
+            UserRoutes userRoutes = new UserRoutes(context.getSystem(), userRegistryActor);
+            AuthRoutes authRoutes = new AuthRoutes(context.getSystem(), userRegistryActor, jobSeekerRegistryActor, employerRegistryActor, userRegistry);
+
+            // Combine userRoutes and authRoutes into a single route
+            Route combinedRoute = pathPrefix("api", () ->
+                    concat(
+                            userRoutes.userRoutes(),
+                            authRoutes.authRoutes()
+                    )
+            );
+
+            // Start the HTTP server with the combined route
+            startHttpServer(combinedRoute, context.getSystem());
 
             return Behaviors.empty();
         });
